@@ -1,4 +1,4 @@
-import MinecraftClasses as mclass
+import MClasses as mclass
 # ToDo Anvil Cost Calculation included with Cost
 # ToDo Villager Statistics showing the ranking for all their books
 #     Requires a list of books for each enchantment, sorting by cost
@@ -24,6 +24,8 @@ def update(enchantments):
     return villagers, enchantments
 
 def initializeEnchantments():
+    # commented enchantments don't exist in the bedrock version
+    # uncomment to use
     data = [("Aqua Affinity",1), ("Bane of Arthropods",5),
             ("Blast Protection",4), #("Curse of Binding",1), ("Curse of Vanishing",1),
             ("Depth Strider",3), ("Efficiency",5), ("Feather Falling",4),
@@ -35,11 +37,12 @@ def initializeEnchantments():
             ("Smite",5), #("Sweeping Edge", 3),
             ("Thorns",3), ("Unbreaking",3)]
 
+    # determine minCost - minCost is based on the rank of the enchantment
     enchantments = []
-    for info in data:
+    for ench in data:
         minCost = None
-        name = info[0]
-        maxRank = info[1]
+        name = ench[0]
+        maxRank = ench[1]
         if maxRank == 1:
             minCost = 5
         elif maxRank == 2:
@@ -50,6 +53,8 @@ def initializeEnchantments():
             minCost = 14
         elif maxRank == 5:
             minCost = 17
+        # special/treasure enchantments minCost is 2x the regular cost
+        # might need to add sweeping edge and the curse enchantments to this
         if name == "Mending" or name == "Frost Walker":
             minCost = minCost*2
             
@@ -59,17 +64,23 @@ def initializeEnchantments():
     return enchantments
     
 def resetEnchantments(enchantments):
+    # should simply reset the statistics without recreating the whole list
     for enchantment in enchantments:
         enchantment.reset()
     return enchantments
     
 def compare(villagers, enchantments):
+    # fix this function
+    # input is annoying and needs to be more versatile. 
+    # e.g. being able to exit at any time
+    # some parts could be put into a new function, possibly
     inp = input("Add Villager(1) Remove Villager(2) Quit(q/e): ")
     while inp != "e" and inp != "q":
         currentVillagers = []
         for villager in villagers:
             currentVillagers.append(villager.getNumber())
-        
+
+        # Add Villager - putting input stuff here can solve input problems
         if inp == "1":
             try:
                 number, newVillager = getVillagerInput(villagers, enchantments)
@@ -80,14 +91,17 @@ def compare(villagers, enchantments):
             addVillager(number, newVillager)
             villagers, enchantments = update(enchantments)
             
+        # Remove Villager
         if inp == "2":
             while True:
+                # if input not an int
                 try:
                     number = int(input("Which Villager?: "))
                 except ValueError:
                     print("invalid input")
                     continue
-
+                
+                # if villager DNE
                 if number in currentVillagers:
                     break
                 else:
@@ -95,6 +109,7 @@ def compare(villagers, enchantments):
                     continue
                 
             while True:
+                # double check - user error sucks
                 try:
                     confirm = input("Are you sure?: ").lower()
                 except TypeError:
@@ -102,7 +117,8 @@ def compare(villagers, enchantments):
                     continue
                 if confirm == "y" or confirm == "n":
                     break
-        
+                
+            # everything checks out - commence
             if confirm == "y":
                 removeVillager(number)
                 villagers, enchantments = update(enchantments)
@@ -112,7 +128,6 @@ def compare(villagers, enchantments):
         inp = input("Add Villager(1) Remove Villager(2) Quit(q/e): ")    
     
 def getResults(enchantments, villagers):
-
     # calculate the best costing trade for each enchantment
     for villager in villagers:
         books = villager.getBooks()
@@ -122,6 +137,7 @@ def getResults(enchantments, villagers):
                     enchantment.compareCost(book.getCost(), book.getRank(), villager.getNumber())
         
     # rate each villager based on number of good trades
+    # possibly get rid of rating, but still need to tell which trade is their best
     for enchantment in enchantments:
         for villager in villagers:
             books = villager.getBooks()
@@ -133,15 +149,19 @@ def getResults(enchantments, villagers):
     return enchantments, villagers
 
 def printResults(enchantments, villagers):
-    spl = "|"
-    na = ""
-    enchLines = getEnchantmentLines(enchantments)
-    villLines = getVillagerLines(villagers)
+    spl = "|"   # column split
+    na = ""     # empty string
+    enchLines = getEnchantmentLines(enchantments, spl, na)
+    villLines = getVillagerLines(villagers, spl, na)
+    
+    # all formatting is done such that the column size is versatile
+    # i.e. I don't have to make a dozen edits here if anything is changed
+    # contents of columns is the responsibility of MClasses
+    # lines are created in getEnchantmentLines and getVillagerLines
     
     # make sure there are equal amounts of lines, even if they are dummy lines
     enchLen = len(enchLines)
-    villLen = len(villLines)
-    
+    villLen = len(villLines)    
     if enchLen < villLen:
         enchDummy = []
         for item in enchLines[0]:
@@ -150,8 +170,7 @@ def printResults(enchantments, villagers):
             else:
                 enchDummy.append(na)
         while len(enchLines) < len(villLines):
-            enchLines.append(enchDummy)
-    
+            enchLines.append(enchDummy)    
     elif villLen < enchLen:
         villDummy = []
         for item in villLines[0]:
@@ -162,7 +181,7 @@ def printResults(enchantments, villagers):
         while len(villLines) < len(enchLines):
             villLines.append(villDummy)
 
-    # combine lines lists into one
+    # combine lines lists into one list
     i = 0
     lines = []
     while i < len(enchLines):
@@ -171,10 +190,10 @@ def printResults(enchantments, villagers):
         lines.append(line)
         i+=1
     
-    # calculate length of headers - the standard for what each line contains
+    # calculate size of headers, i.e. the standard for how many columns there are
     length = len(lines[0])
     
-    # calculate maximum length of each element column in enchLines and villLines
+    # calculate maximum length of each column
     i = 0
     widths = length*[0]
     while i < length:
@@ -183,19 +202,22 @@ def printResults(enchantments, villagers):
                 widths[i] = len(str(line[i]))                
         i+=1
     
-    # print everything      
+    # print all the lines!
     for line in lines:
         i = 0
         for width in widths:
+            # create format size based on column widths and print each element
             widthStr = "{:^" + str(width+1) + "}"
             print(widthStr.format(line[i]), end=na)
             i+=1
+            
+        # finished
         print(na)
 
-def getVillagerLines(villagers):
+def getVillagerLines(villagers, spl, na):
     lines = []
-    spl = "|"
-    na = ""
+    # villLines contents are handled here
+    # think about getting rid of rating
     
     # header
     line = []
@@ -210,23 +232,31 @@ def getVillagerLines(villagers):
         rating = len(goodTrades)
         
         while i < rating or i == 0:
-            # handle first line
+            # handle first two columns of villager
             line = []
             if i == 0:
+                # first row
                 line.extend((number, spl, rating, spl))
-            # handle other lines
             else:
+                # subsequent rows of the same villager
                 line.extend((na, spl, na, spl))
-            
+
+            # handle other columns
             if rating == 0:
+                # no good trades, leave empty
                 line.extend((na, spl, na))
-            else:                
+            else:
+                # get a good trade - create strings for columns
                 name = goodTrades[i].getEnch()
                 rank = goodTrades[i].getRank()
                 cost = goodTrades[i].getCost()
+
+                # create enchantment string for column
+                enchStr = ""
                 
-                enchStr, rnStr = "", ""
-                
+                # rank of trade enchantment in roman numeral form!
+                # use this a couple times - make a function?
+                rnStr = ""
                 if rank == 1:
                     rnStr = "I"
                 elif rank == 2:
@@ -246,10 +276,9 @@ def getVillagerLines(villagers):
             
     return lines
 
-def getEnchantmentLines(enchantments):
+def getEnchantmentLines(enchantments, spl, na):
     lines = []
-    spl = "|"
-    # each line in lines should have 4 items separated by spl, 7 in total
+    # enchLines contents are handled here
 
     # header
     line = []
@@ -262,13 +291,23 @@ def getEnchantmentLines(enchantments):
         name = enchantment.getName()
         rank = enchantment.getMaxRank()
         cost = enchantment.getCurrentCost()
+        
+        # diff is the different between the calculated minimum cost and possible
+        # minimum cost to show if it can get better
         try:
             diff = cost - enchantment.getMinCost()
         except TypeError:
             diff = "-"
-        villagers = enchantment.getVillagers()
-        rnStr, enchStr, villStr = "", "", ""
+        if diff == 0:
+            diff = "="
         
+        # create enchantment and villager string for columns
+        villagers = enchantment.getVillagers()
+        enchStr, villStr = "", ""
+
+        # rank of trade enchantment in roman numeral form!
+        # use this a couple times - make a function?
+        rnStr = ""
         if rank == 1:
             rnStr = "I"
         elif rank == 2:
@@ -280,10 +319,9 @@ def getEnchantmentLines(enchantments):
         elif rank == 5:
             rnStr = "V"
         enchStr = name + " " + rnStr
-        
-        if diff == 0:
-            diff = "="
-        
+
+        # in case two villagers have the same enchantment for the same cost
+        # make a string of numbers separated by commas
         i = 1
         for villager in villagers:
             villStr = villStr + str(villager)
@@ -298,6 +336,10 @@ def getEnchantmentLines(enchantments):
         
 def getVillagers():
     villagers = []
+    # changes to make:
+    # if file DNE, create one - format it?
+    # make it so lines don't have numbers in front of them by default
+    # still want order to matter, i.e. 1 and 3 can be assigned but 2 is empty
 
     # open file to get information
     f = open("VillagerBooks.txt", "r")
@@ -313,6 +355,7 @@ def getVillagers():
         number = int(villager[0])
 
         # only add a villager if it has books assigned to it
+        # i.e. a line without any info is not a villager
         if villager[1] != "":
             books = []
             booklist = villager[1].split(";")
@@ -333,10 +376,12 @@ def getVillagers():
     return villagers
 
 def removeVillager(number):
+    # open file to get information
     f = open("VillagerBooks.txt", "r")
     if f.mode == "r":
         contents = f.readlines()
     
+    # find villager and delete information
     i = len(contents) - 1
     while i >= 0:
         if int(contents[i].split(":")[0]) == number:
@@ -344,7 +389,8 @@ def removeVillager(number):
             contents.insert(i, str(number) + ":\n")
         i-=1
     f.close()
-    
+
+    # save changes
     f = open("VillagerBooks.txt", "w")
     f.flush()
     for line in contents:
@@ -352,11 +398,13 @@ def removeVillager(number):
     f.close()
 
 def addVillager(number, newVillager):    
+    # open file to get information
     f = open("VillagerBooks.txt", "r")
     if f.mode == "r":
         contents = f.readlines()
     f.close()
     
+    # find the chosen line and add new information to it
     i = len(contents) - 1
     while i >= 0:
         if int(contents[i].split(":")[0]) == number:
@@ -364,6 +412,7 @@ def addVillager(number, newVillager):
             contents.insert(i, newVillager + "\n")
         i-=1    
             
+    # save changes
     f = open("VillagerBooks.txt", "w")
     f.flush()
     for line in contents:
@@ -372,10 +421,12 @@ def addVillager(number, newVillager):
     
 def getVillagerInput(villagers, enchantments):
     newVillager = []
+    # potentially make it so you can go back a step in this input
+    
+    # list of villager numbers that exist
     currentVillagers = []
     for villager in villagers:
         currentVillagers.append(villager.getNumber())
-    testPrint(currentVillagers)
         
     while True:
         # check if number is taken
@@ -384,8 +435,9 @@ def getVillagerInput(villagers, enchantments):
         except ValueError:
             print("invalid input")
             continue        
-        
-        if number > 30:
+
+        # pick a number between 1 and... 1,000,000
+        if number > 1000000:
             print("number too high")
             continue
         elif number <= 0:
@@ -395,13 +447,20 @@ def getVillagerInput(villagers, enchantments):
             print("number taken")
             continue
         else:
+            if number > 40:
+                # make a list of easter egg outputs and pick on at random?
+                # I vote yes
+                print("why do you have so many villagers? Wait, don't answer that... carry on...")
             newVillager.extend((number, ":"))
             break
     
     i = 0
     while i < 3:
         i+=1
-        # check if it's a valid enchantment    
+        # check if it's a valid enchantment
+        # this is annoying because it has to be exact - at least change it so
+        # capitals don't matter
+        # potentially add a feature to guess what enchantment you meant to type
         while True:
             ench = input("Enchantment " + str(i) + ": ")
             valid = False
@@ -476,10 +535,10 @@ def villagerRating(villagers, trades):
             villagers[trade[1]].addGoodTrade(trade)
 
 def testPrint(printing):
+    # this makes it easier to remove print statements after debugging but
+    # serves no actual use in the program
     print(printing)
-     
-
-        
+             
 if __name__ == "__main__":
     main()
     
